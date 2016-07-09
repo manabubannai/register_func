@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+</head>
+<body>
+<h1 id="仮タイトル">仮タイトル</h1>
+
+<p>PHPでログイン・会員登録機能を作る方法【2016年版】</p>
+
+<h1 id="kw">KW</h1>
+
+<p>php ログイン 590
+php 会員登録 70</p>
+
+<h1 id="phpのログインシステム用のdbを作成（sql）">PHPのログインシステム用のDBを作成（SQL）</h1>
+
+<p>phpMyAdminのSQLに下記を貼り付け。</p>
+
+<pre><code class="sql">CREATE DATABASE register_func DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE TABLE register_func. users (
+user_id INT( 5 ) NOT NULL AUTO_INCREMENT PRIMARY KEY ,
+username VARCHAR( 25 ) NOT NULL ,
+email VARCHAR( 35 ) NOT NULL ,
+password VARCHAR( 60 ) NOT NULL ,
+UNIQUE (email)
+);
+</code></pre>
+
+<h1 id="db接続のidとpassを保管するファイルを作成する">DB接続のIDとPASSを保管するファイルを作成する</h1>
+
+<p>新規作成ファイル：core/config.php</p>
+
+<pre><code class="php">$host = &quot;localhost&quot;;
+$username = &quot;root&quot;;
+$password = &quot;root&quot;;
+$dbname = &quot;register_func&quot;;
+</code></pre>
+
+<h1 id="coreフォルダへのアクセス制限ファイル（.htaccess）を作成">coreフォルダへのアクセス制限ファイル（.htaccess）を作成</h1>
+
+<p>新規作成ファイル：core/.htaccess</p>
+
+<pre><code>&lt;Files ~ &quot;\.(dwt|php)$&quot;&gt;
+Deny from all
+&lt;/Files&gt;
+</code></pre>
+
+<h1 id="dbと接続するphpファイルを作成する">DBと接続するPHPファイルを作成する</h1>
+
+<p>新規作成ファイル：dbconnect.php</p>
+
+<pre><code class="sql">require_once('./core/config.php');
+
+$mysqli = new mysqli($host, $username, $password, $dbname);
+if ($mysqli-&gt;connect_error) {
+    error_log($mysqli-&gt;connect_error);
+    exit;
+}
+</code></pre>
+
+<h1 id="会員登録ページを作る">会員登録ページを作る</h1>
+
+<p>新規作成ファイル：register.php
+まずはDB接続とセッションスタートを記述します。
+セッションってなにそれ美味しいのって人は、<a href="http://techacademy.jp/magazine/4970">PHPでセッションを使う方法【初心者向け】</a>をどうぞ。</p>
+
+<pre><code class="php">session_start();
+if( isset($_SESSION['user']) != &quot;&quot;) {
+    // ログイン済みの場合はリダイレクト
+    header(&quot;Location: home.php&quot;);
+}
+// DBとの接続
+include_once 'dbconnect.php';
+</code></pre>
+
+<h1 id="会員登録フォームを作る">会員登録フォームを作る</h1>
+
+<p>編集ファイル：register.php
+HTMLの時間です。下記のとおり。</p>
+
+<pre><code class="html">&lt;!DOCTYPE HTML&gt;
+&lt;html lang=&quot;ja&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot; /&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;PHPの会員登録機能&lt;/title&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;style.css&quot;&gt;
+
+&lt;!-- Bootstrap読み込み（スタイリングのため） --&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;col-xs-6 col-xs-offset-3&quot;&gt;
+
+&lt;form method=&quot;post&quot;&gt;
+    &lt;h1&gt;会員登録フォーム&lt;/h1&gt;
+    &lt;div class=&quot;form-group&quot;&gt;
+        &lt;input type=&quot;text&quot; class=&quot;form-control&quot; name=&quot;username&quot; placeholder=&quot;ユーザー名&quot; required /&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;form-group&quot;&gt;
+        &lt;input type=&quot;email&quot;  class=&quot;form-control&quot; name=&quot;email&quot; placeholder=&quot;メールアドレス&quot; required /&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;form-group&quot;&gt;
+        &lt;input type=&quot;password&quot; class=&quot;form-control&quot; name=&quot;password&quot; placeholder=&quot;パスワード&quot; required /&gt;
+    &lt;/div&gt;
+    &lt;button type=&quot;submit&quot; class=&quot;btn btn-default&quot; name=&quot;signup&quot;&gt;会員登録する&lt;/button&gt;
+    &lt;a href=&quot;index.php&quot;&gt;ログインはこちら&lt;/a&gt;
+&lt;/form&gt;
+
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<h1 id="会員登録フォームの情報をdbに保存する">会員登録フォームの情報をDBに保存する</h1>
+
+<p>編集ファイル：register.php
+会員登録ボタン（signup）が押された時に実行されるスクリプトです。
+会員登録が成功するとメッセージが表示されます。
+Photo: 会員登録完了の画像</p>
+
+<pre><code class="php">// signupがPOSTされたときに下記を実行
+if(isset($_POST['signup'])) {
+
+    $username = $mysqli-&gt;real_escape_string($_POST['username']);
+    $email = $mysqli-&gt;real_escape_string($_POST['email']);
+    $password = $mysqli-&gt;real_escape_string($_POST['password']);
+    $password = password_hash($password, PASSWORD_DEFAULT);
+
+    // POSTされた情報をDBに格納する
+    $query = &quot;INSERT INTO users(username,email,password) VALUES('$username','$email','$password')&quot;;
+
+    if($mysqli-&gt;query($query)) {  ?&gt;
+        &lt;div class=&quot;alert alert-success&quot; role=&quot;alert&quot;&gt;登録しました&lt;/div&gt;
+        &lt;?php } else { ?&gt;
+        &lt;div class=&quot;alert alert-danger&quot; role=&quot;alert&quot;&gt;エラーが発生しました。&lt;/div&gt;
+        &lt;?php
+    }
+}
+</code></pre>
+
+<h1 id="ログインページ作成">ログインページ作成</h1>
+
+<p>新規作成ファイル：index.php
+Emailとパスワードでユーザー認証して、一致した場合はログインできます。
+説明するまでもないですよね。よくあるログインページです。
+まずは下記のようにDBに接続します。</p>
+
+<pre><code class="php">ob_start();
+session_start();
+if( isset($_SESSION['user']) != &quot;&quot;) {
+    header(&quot;Location: home.php&quot;);
+}
+include_once 'dbconnect.php';
+</code></pre>
+
+<h1 id="ログインページのログインフォーム作成">ログインページのログインフォーム作成</h1>
+
+<p>編集ファイル：index.php
+register.phpを作った時とほぼ同じです。</p>
+
+<pre><code class="html">&lt;!DOCTYPE HTML&gt;
+&lt;html lang=&quot;ja&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot; /&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;PHPのログイン機能&lt;/title&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;style.css&quot;&gt;
+&lt;!-- Bootstrap読み込み（スタイリングのため） --&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css&quot;&gt;
+&lt;/head&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;col-xs-6 col-xs-offset-3&quot;&gt;
+
+&lt;form method=&quot;post&quot;&gt;
+    &lt;h1&gt;ログインフォーム&lt;/h1&gt;
+    &lt;div class=&quot;form-group&quot;&gt;
+        &lt;input type=&quot;email&quot;  class=&quot;form-control&quot; name=&quot;email&quot; placeholder=&quot;メールアドレス&quot; required /&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;form-group&quot;&gt;
+        &lt;input type=&quot;password&quot; class=&quot;form-control&quot; name=&quot;password&quot; placeholder=&quot;パスワード&quot; required /&gt;
+    &lt;/div&gt;
+    &lt;button type=&quot;submit&quot; class=&quot;btn btn-default&quot; name=&quot;login&quot;&gt;ログインする&lt;/button&gt;
+    &lt;a href=&quot;register.php&quot;&gt;会員登録はこちら&lt;/a&gt;
+&lt;/form&gt;
+
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<pre><code class="php"></code></pre>
+
+<pre><code class="php"></code></pre>
+
+</body>
+</html>
